@@ -10,6 +10,3 @@ importlib.reload(WorkFlowController)
 # %%
 # Llamamos a la función main definida en first.py
 first.main()
-
-
-

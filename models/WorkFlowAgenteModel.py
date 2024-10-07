@@ -148,6 +148,18 @@ class WorkFlowAgenteModel:
             )
             queries.append(delete_atributo_valor)
 
+            # DELETE para AtributoValorProcesoWorkFlow con INNER JOIN
+            delete_atributo_valor_proceso = self.query_builder.build_query(
+                action="DELETE",
+                table="wfl.AtributoValorProcesoWorkFlow",
+                joins=[
+                    {"type": "INNER JOIN", "table": "wfl.ProcesoWorkFlow", "on": "wfl.ProcesoWorkFlow.Id = wfl.AtributoValorProcesoWorkFlow.ProcesoWorkFlowId"}
+                ],
+                conditions={"wfl.ProcesoWorkFlow.WorkflowId": f"wfl.GetModuloAgenteId('{modulo}')"}
+            )
+
+            queries.append(delete_atributo_valor_proceso)
+
             # DELETE para TechnicalData con INNER JOIN
             delete_technical_data = self.query_builder.build_query(
                 action="DELETE",
