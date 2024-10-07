@@ -61,19 +61,21 @@ class LimpiarAemeDbWindow(tk.Toplevel):
     def generate_sql(self):
         # Obtener la carpeta donde se guardará el archivo, o usar "Descargas" por defecto
         folder_path = self.filepath.get() or os.path.expanduser("~/Downloads")
-        tarea_num = self.tarea_id.split("-")[-1]
-
+        
         # Crear nombre del archivo .sql
         fecha_actual = datetime.now().strftime("%Y%m%d")
-        filename = f"{fecha_actual}-{tarea_num}-000-DAT-limpieza-{self.modulo}.sql"
+        tarea_id_num = self.tarea_id.split('-')[1]  # Extraer solo la parte numérica de la tarea
+        filename = f"{fecha_actual}-{tarea_id_num}-000-DAT-limpieza-{self.modulo}.sql"
         full_path = os.path.join(folder_path, filename)
+        
+        # Generar el encabezado del archivo SQL
         header = f"""
 /*
 * LINK TAREA: https://app.clickup.com/t/36671967/{self.tarea_id} 
 * DESCRIPCIÓN: Script de limpieza para {self.modulo} - {self.idcAgente} 
 *
 * AUTOR: {self.autor} 
-* FECHA CREACIÓN: {fecha_actual}
+* FECHA CREACIÓN: {fecha_actual} 
 * FECHA DESPLIEGUE DESARROLLO: 
 * FECHA DESPLIEGUE PRE-PRODUCCIÓN: 
 * FECHA DESPLIEGUE PRODUCCIÓN: 
@@ -85,36 +87,45 @@ class LimpiarAemeDbWindow(tk.Toplevel):
 -------------------------------------------------
 BEGIN TRAN
 """
-        
-        # Generar las queries y guardarlas en el archivo
-        with open(full_path, 'w') as sql_file:
-            queries = self.controller.generar_queries_aemedb(self.idcAgente, self.modulo)  # Función para generar queries
-            sql_file.write(header)
-            sql_file.write("\n")
-            for query in queries:
 
-                formatted_query = query.replace("None", "NULL")
-                # Formatear la query: saltos de línea después de ciertas palabras clave, excepto en el caso de JOIN y ON
-                formatted_query = query.replace(" FROM ", "\nFROM ")
-                formatted_query = formatted_query.replace(" WHERE ", "\nWHERE ")
-                formatted_query = formatted_query.replace(" AND ", "\nAND ")
-                formatted_query = formatted_query.replace(" OR ", "\nOR ")
-                
-                # Mantener JOIN y ON en la misma línea
-                formatted_query = formatted_query.replace(" INNER JOIN ", "\nINNER JOIN ")
-                formatted_query = formatted_query.replace(" LEFT JOIN ", "\nLEFT JOIN ")
-                formatted_query = formatted_query.replace(" RIGHT JOIN ", "\nRIGHT JOIN ")
-                formatted_query = formatted_query.replace(" ON ", " ON ")  # Asegurar que ON quede en la misma línea que el JOIN
-                
-                # Escribir la query formateada en el archivo con un ';' al final
-                sql_file.write(formatted_query + ";\nGO\n\n")  # Doble salto de línea para separar queries
-            footer = """
---COMMIT
-ROLLBACK
-"""
-            sql_file.write(footer)
+        # Acumulador para todo el contenido del archivo SQL
+        content = header + "\n"
+
+        queries = self.controller.generar_queries_aemedb(self.idcAgente, self.modulo)
+
+        for query in queries:
+            # Formatear la query
+            formatted_query = query
+
+            # Añadir saltos de línea después de ciertas palabras clave, excepto en el caso de JOIN y ON
+            formatted_query = formatted_query.replace(" FROM ", "\nFROM ")
+            formatted_query = formatted_query.replace(" WHERE ", "\nWHERE ")
+            formatted_query = formatted_query.replace(" AND ", "\nAND ")
+            formatted_query = formatted_query.replace(" OR ", "\nOR ")
+
+            # Mantener JOIN y ON en la misma línea
+            formatted_query = formatted_query.replace(" INNER JOIN ", "\nINNER JOIN ")
+            formatted_query = formatted_query.replace(" LEFT JOIN ", "\nLEFT JOIN ")
+            formatted_query = formatted_query.replace(" RIGHT JOIN ", "\nRIGHT JOIN ")
+            formatted_query = formatted_query.replace(" ON ", " ON ")
+
+            # Agregar la query formateada al contenido
+            content += formatted_query + ";\nGO\n\n"
+
+        # Añadir el cierre final
+        footer = "GO\n--COMMIT\nROLLBACK\n"
+        content += footer
+
+        # Reemplazar todas las ocurrencias de 'None' con NULL en el contenido generado
+        content = content.replace("None", "NULL").replace("'NULL'", "NULL")
+
+        # Escribir todo el contenido en el archivo
+        with open(full_path, 'w') as sql_file:
+            sql_file.write(content)
+
         # Mensaje de confirmación
         tk.messagebox.showinfo("Éxito", f"Archivo SQL generado en: {full_path}")
+
 
 
 
