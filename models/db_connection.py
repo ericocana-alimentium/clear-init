@@ -6,11 +6,13 @@ class DBConnection:
         self.db_host = "10.0.3.5,1433"  # IP del servidor
         self.connection = None
         self.cursor = None
+        self.db_user = "cproject_developer"
+        self.db_pass = "10549971ea#E32!!"
 
     def connect(self):
         try:
             self.connection = pyodbc.connect(
-                f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={self.db_host};DATABASE={self.db_name};UID=cproject_developer;PWD=10549971ea#E32!!'
+                f'DRIVER={{ODBC Driver 17 for SQL Server}};SERVER={self.db_host};DATABASE={self.db_name};UID={self.db_user};PWD={self.db_pass}'
             )
             self.cursor = self.connection.cursor()  # Inicializamos el cursor correctamente
             print(f"Conectado a la base de datos: {self.db_name}")
