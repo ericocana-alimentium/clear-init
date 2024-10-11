@@ -6,23 +6,33 @@ class ConnectaAlimentiumModel:
         self.cursor = cursor
         self.query_builder = QueryBuilder(cursor)
         self.queries = []
+        self.datos_aeme = []
 
     def crear_tabla_temporal(self, idcAgente, modulo):
+
         """
         Crea la tabla temporal en la base de datos `Connecta_Alimentium` utilizando el query_builder.
         """
         # Imprimir los parámetros para asegurarnos de que son correctos
+        # Query para eliminar la tabla temporal si existe
 
         try:
+            drop_query = "DROP TABLE IF EXISTS Connecta_Alimentium..#tpAemeDatos"
+            self.query_builder.execute_query(drop_query, allow_modifications=True)
+
             # Construir la query utilizando el query_builder
-            query = self.query_builder.build_query(
+            create_query = self.query_builder.build_query(
                 action="SELECT INTO",
+
                 table="AeMeDb..ProductoOrganizacion",
+
                 attributes=[
                     "AeMeDb..ProductoOrganizacion.Id AS ProductoOrganizacionId",
                     "AeMeDb..ProductoOrganizacion.Codigo"
                 ],
+
                 into="Connecta_Alimentium..#tpAemeDatos",
+
                 joins=[
                     {
                         "type": "INNER JOIN",
@@ -30,48 +40,78 @@ class ConnectaAlimentiumModel:
                         "on": "AeMeDb..ProductoOrganizacion.Id = AeMeDb.wfl.ProcesoWorkFlow.ProductoOrganizacionId"
                     }
                 ],
+
                 conditions={
                     "AeMeDb..ProductoOrganizacion.idcAgente": idcAgente,
                     "AeMeDb.wfl.ProcesoWorkFlow.WorkflowId": f"AeMeDb.wfl.GetModuloAgenteId('{modulo}')"
                 }
+
             )
 
-            # Imprimir la query generada para ver el resultado
-            print(f"Query generada: {query}")
-
             # Añadir la query a la lista y ejecutarla
-            self.queries.append(query)
-            #result = self.execute_query(query)
-            print("Tabla temporal creada exitosamente.")
-            #return result
+            self.queries.append(create_query)
+            # Ejecutar la query en el contexto adecuado
+            self.query_builder.execute_query(create_query, allow_modifications=True)
 
+            select_query = self.query_builder.build_query(
+                        action="SELECT",
+                        table="#tpAemeDatos",
+                        attributes=["*"]
+                    )
+                    
+                    # Ejecutar la query para seleccionar los datos de la tabla temporal
+            self.datos_aeme = self.query_builder.execute_query(select_query)
+            return create_query
         except Exception as e:
-            # Manejo de errores
+
             print(f"Error al crear la tabla temporal: {str(e)}")
             ErrorHandler.handle_error(e, "Error al crear la tabla temporal en Connecta_Alimentium")
             return None
 
-    def obtener_productos_agentes(self, codigos_productos):
+    def obtener_productos_agentes(self):
 
         """
-        Obtiene todos los registros de la tabla dbo.ProductosAgentes en Connecta_Alimentium usando el query_builder.
+        Obtiene los productos de la tabla `dbo.ProductosAgentes` usando los códigos obtenidos 
+        de la tabla temporal almacenada en `self.datos_aeme`.
         """
 
         try:
-            # Construir la query para obtener registros de la tabla dbo.ProductosAgentes
+            # Validamos que `self.datos_aeme` tenga datos antes de iterar
+            if not self.datos_aeme or len(self.datos_aeme) == 0:
+                print("Error: self.datos_aeme está vacía o no se llenó correctamente.")
+                return None
+
+            # Extraer los códigos de la segunda posición de cada tupla en self.datos_aeme
+            codigos_productos = [dato[1] for dato in self.datos_aeme]
+
+            # Construir la query para obtener los productos agentes
             query = self.query_builder.build_query(
                 action="SELECT",
                 table="dbo.ProductosAgentes",
-                attributes=["Id", "NombreProducto", "Codigo", "FechaCreacion"]
+                attributes=[
+                    "IdcAgente",
+                    "IdcProducto",
+                    "Codigo",
+                    "Status",
+                    "IdcFabricante"
+                ],
+
+                conditions={
+                    "Codigo": codigos_productos  # Usamos la lista de códigos
+                }
             )
 
-            # Ejecutar la consulta y obtener resultados
-            registros = self.query_builder.execute_query(query)
-            return registros
+            result = self.query_builder.execute_query(query)
+
+            return result
 
         except Exception as e:
-            ErrorHandler.handle_error(e, "Error al obtener registros de dbo.ProductosAgentes")
+            # Manejo de errores
+            print(f"Error al obtener productos agentes: {str(e)}")
+            ErrorHandler.handle_error(e, "Error al obtener productos agentes de Connecta_Alimentium")
             return None
+
+
 
     def __getattribute__(self, name):
         return super().__getattribute__(name)

@@ -6,9 +6,11 @@ class QueryBuilder:
         self.cursor = cursor
 
     def build_query(self, action, table, attributes=None, into = None ,conditions=None, values=None, joins=None):
+
         """
         Construye la query basada en los parámetros proporcionados, pero no la ejecuta.
         """
+
         query = ""
 
         # SELECT y SELECT INTO
@@ -90,14 +92,25 @@ class QueryBuilder:
 
         return query
 
-    def execute_query(self, query):
+    def execute_query(self, query, allow_modifications=False):
         try:
             print(f"Query construida: {query}")
-            self.cursor.execute(query)  # Ejecutar sin parámetros
-            if query.strip().upper().startswith("SELECT"):
+            
+            # Validar si la query es una modificación y si está permitida
+            if not allow_modifications and not query.strip().upper().startswith("SELECT"):
+                raise ValueError("Las modificaciones no están permitidas con esta configuración.")
+            
+            self.cursor.execute(query)  # Ejecutar la query
+            
+            # Verificar si es un SELECT para intentar obtener resultados
+            if query.strip().upper().startswith("SELECT") and "INTO" not in query.strip().upper():
                 return self.cursor.fetchall()
             else:
-                self.cursor.commit()
+                # Si no es un SELECT que devuelva resultados, confirmar la transacción
+                self.cursor.connection.commit()
+                print("Modificación ejecutada exitosamente")
+                return None
+
         except Exception as e:
             ErrorHandler.handle_error(e, query)
             return None
