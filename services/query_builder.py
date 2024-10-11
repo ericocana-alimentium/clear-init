@@ -5,16 +5,22 @@ class QueryBuilder:
     def __init__(self, cursor):
         self.cursor = cursor
 
-    def build_query(self, action, table, attributes=None, conditions=None, values=None, joins=None):
+    def build_query(self, action, table, attributes=None, into = None ,conditions=None, values=None, joins=None):
         """
         Construye la query basada en los parámetros proporcionados, pero no la ejecuta.
         """
         query = ""
 
-        # SELECT
-        if action == "SELECT":
+        # SELECT y SELECT INTO
+        if action == "SELECT" or action == "SELECT INTO":
             columns = ", ".join(attributes) if attributes else "*"
-            query = f"SELECT {columns} FROM {table}"
+            query = f"SELECT {columns}"
+            
+            # Añadimos la cláusula INTO si está presente y si la acción es "SELECT INTO"
+            if action == "SELECT INTO" and into:
+                query += f" INTO {into}"
+
+            query += f" FROM {table}"
 
             if joins:
                 for join in joins:
@@ -23,9 +29,10 @@ class QueryBuilder:
             if conditions:
                 where_clauses = []
                 for key, value in conditions.items():
-                    if isinstance(value, str) and (value.startswith("wfl.") or value.startswith("dbo.") or value.startswith("ftc.")):
-                        where_clauses.append(f"{key} = {value}")  # No quotes for functions
-                    elif isinstance(value, list):  # Handle lists with IN
+                    # Si el valor parece una función SQL, no lo envuelvas en comillas
+                    if isinstance(value, str) and "(" in value and ")" in value:
+                        where_clauses.append(f"{key} = {value}")
+                    elif isinstance(value, list):  # Manejo de listas con IN
                         value_list = ", ".join(f"'{item}'" if isinstance(item, str) else str(item) for item in value)
                         where_clauses.append(f"{key} IN ({value_list})")
                     else:

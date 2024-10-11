@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import font
 from views.LimpiarAemeDbWindow import LimpiarAemeDbWindow  # Importamos la nueva ventana
+from views.LimpiarConnectWindow import LimpiarConnectWindow
 
 
 class LimpiezaWindow(tk.Frame):
@@ -70,23 +71,30 @@ class LimpiezaWindow(tk.Frame):
             self.check_vars_aemedb[tabla] = var  # Almacenar la variable en el diccionario
             self.tablas_a_borrar_aemedb.append(tabla)  # Añadir la tabla a la lista de tablas a borrar en AemeDB
 
-        # Reservar espacio para Connect (columna vacía por ahora)
-        for index in range(len(tablas_aemedb)):
-            empty_label = tk.Label(self.columns_frame, text="")  # Espacio vacío
-            empty_label.grid(row=index+2, column=1)
+        # Listado de tablas para Connect
+        tablas_connect = [
+            "dbo.ProductosAgentes",
+            "dbo.Multimedia"
+        ]
+
+        for index, tabla in enumerate(tablas_connect):
+            var = tk.BooleanVar(value=True)  
+            checkbox = tk.Checkbutton(self.columns_frame, text=tabla, variable=var, state=tk.DISABLED)
+            checkbox.grid(row=index+2, column=1, sticky="w")
+            self.check_vars_connect[tabla] = var  
+            self.tablas_a_borrar_connect.append(tabla) 
+
 
         # Crear un frame para los botones "Limpiar AemeDb" y "Limpiar Connect"
         self.buttons_frame = tk.Frame(self)
         self.buttons_frame.pack(pady=10)
 
-        self.limpiar_aemedb_button = tk.Button(self.buttons_frame, text="Limpiar AemeDb", command=self.abrir_ventana_aemedb)
-        self.limpiar_aemedb_button.grid(row=0, column=0, padx=10)
-
-        # Botón para limpiar Connect
         self.limpiar_connect_button = tk.Button(self.buttons_frame, text="Limpiar Connect", command=self.abrir_ventana_connect)
-        self.limpiar_connect_button.grid(row=0, column=1, padx=10)
+        self.limpiar_connect_button.grid(row=0, column=0, padx=10)
 
-        # Botón para gestionar productos y multimedia
+        self.limpiar_aemedb_button = tk.Button(self.buttons_frame, text="Limpiar AemeDb", command=self.abrir_ventana_aemedb)
+        self.limpiar_aemedb_button.grid(row=0, column=1, padx=10)
+
         self.productos_button = tk.Button(self, text="Productos - Multimedia", command=self.gestionar_multimedia)
         self.productos_button.pack()
 
@@ -117,12 +125,8 @@ class LimpiezaWindow(tk.Frame):
         self.crear_ventana(LimpiarAemeDbWindow, "Limpiar AemeDb", "500x400", controller=self.controller, idcAgente=self.idcAgente, autor=self.autor, modulo=self.modulo, tarea_id= self.tarea_id)
 
     def abrir_ventana_connect(self):
-        # Crear nueva ventana para Connect
-        new_window = tk.Toplevel(self)
-        new_window.title("Limpiar Connect")
-        new_window.geometry("400x300")
-        label = tk.Label(new_window, text="Ventana para limpiar Connect")
-        label.pack(pady=20)
+
+        self.crear_ventana(LimpiarConnectWindow, "Limpiar Connect", "500x400", controller=self.controller, idcAgente=self.idcAgente, autor=self.autor, modulo=self.modulo, tarea_id= self.tarea_id)
 
     def gestionar_multimedia(self):
         print("Gestionar productos y multimedia")

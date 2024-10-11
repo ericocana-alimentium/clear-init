@@ -8,6 +8,15 @@ class WorkFlowController(BaseController):
         self.list_procesos = []
         self.ficha_tecnica_ids = []
         self.list_productos_procesados = []
+    def cambiar_base_datos(self, nueva_bd):
+        """
+        Cambia la base de datos actual.
+        """
+        if not self.db or not self.db.cursor:
+            self.connect_to_db()
+
+        self.db.cambiar_base_datos(nueva_bd)
+        
         
     def validate_agente_modulo(self, idcAgente, modulo):
         

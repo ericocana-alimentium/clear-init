@@ -127,7 +127,7 @@ class WorkFlowAgenteModel:
             update_query = self.query_builder.build_query(
                 action="UPDATE",
                 table="ProductoOrganizacion",
-                values={"FichaTecnicaPrincipalId": None, "LastFichaTecnicaPrincipalId": None},
+                values={"FichaTecnicaPrincipalId": None, "LastFichaTecnicaPrincipalId": None, "RowCtrlStatus": "AC"},
                 joins=[
                     {"type": "INNER JOIN", "table": "wfl.ProcesoWorkFlow", "on": "ProductoOrganizacion.Id = wfl.ProcesoWorkFlow.ProductoOrganizacionId"}
                 ],
