@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import font
 from views.LimpiarAemeDbWindow import LimpiarAemeDbWindow  # Importamos la nueva ventana
 from views.LimpiarConnectWindow import LimpiarConnectWindow
+from controllers.ConnectaAlimentiumController import ConnectaAlimentiumController  # Asegúrate de importar el controlador correcto
 
 
 class LimpiezaWindow(tk.Frame):
@@ -17,8 +18,11 @@ class LimpiezaWindow(tk.Frame):
         self.tablas_a_borrar_connect = []  # Lista para almacenar las tablas de Connect
         self.check_vars_aemedb = {}  # Diccionario para almacenar las variables de las checkboxes de AemeDB
         self.check_vars_connect = {}  # Diccionario para almacenar las variables de las checkboxes de Connect
+        self.connecta_controller = ConnectaAlimentiumController("Connecta_Alimentium")
+        
         self.pack()
         self.create_widgets()
+        
 
     def create_widgets(self):
         # Crear fuente en negrita y más grande
@@ -126,7 +130,7 @@ class LimpiezaWindow(tk.Frame):
 
     def abrir_ventana_connect(self):
 
-        self.crear_ventana(LimpiarConnectWindow, "Limpiar Connect", "500x400", controller=self.controller, idcAgente=self.idcAgente, autor=self.autor, modulo=self.modulo, tarea_id= self.tarea_id)
-
+       self.crear_ventana(LimpiarConnectWindow, "Limpiar Connect", "500x400", controller=self.connecta_controller, idcAgente=self.idcAgente, autor=self.autor, modulo=self.modulo, tarea_id=self.tarea_id)
+    
     def gestionar_multimedia(self):
         print("Gestionar productos y multimedia")
