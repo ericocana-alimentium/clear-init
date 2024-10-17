@@ -80,7 +80,7 @@ class ConnectaAlimentiumController(BaseController):
         """
         fecha_actual = datetime.now().strftime("%Y%m%d")
         tarea_id_num = tarea_id.split('-')[1]
-        filename = f"{fecha_actual}-{tarea_id_num}-000-DAT-limpieza-{self.modulo}.sql"
+        filename = f"{fecha_actual}-{tarea_id_num}-000-DAT-limpieza-connecta-{self.modulo}.sql"
         full_path = os.path.join(folder_path, filename)
 
         # Generar el encabezado del archivo
