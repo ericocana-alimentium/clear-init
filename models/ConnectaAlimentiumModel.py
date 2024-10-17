@@ -34,11 +34,11 @@ class ConnectaAlimentiumModel:
                     }
                 ],
                 conditions={
-                    "AeMeDb..ProductoOrganizacion.idcAgente": idcAgente,
+                    "AeMeDb..ProductoOrganizacion.idcAgente": int(idcAgente),
                     "AeMeDb.wfl.ProcesoWorkFlow.WorkflowId": f"AeMeDb.wfl.GetModuloAgenteId('{modulo}')"
                 }
             )
-
+            print(f"Query builder: {query}")
             # Ejecutar la query para crear la tabla temporal
             self.query_builder.execute_query(query, allow_modifications=True)
 
@@ -55,68 +55,50 @@ class ConnectaAlimentiumModel:
             print(f"Error al crear la tabla temporal: {str(e)}")
             return [], None  # Devolver una lista vacía y None en caso de error
         
-    def generar_query_update_productos(self, idcAgente):
-        """
-        Genera la query de actualización (UPDATE) para la tabla ProductosAgentes sin usar alias.
-        """
-        try:
-            # Construir la query utilizando el query_builder sin alias
-            update_query = self.query_builder.build_query(
-                action="UPDATE",
-                table="dbo.Productos",  
-                values={"Status": "AC"},  # SET Status = 'AC'
-                joins=[
-                    {
-                        "type": "INNER JOIN",
-                        "table": "#tpAemeDatos",  
-                        "on": "#tpAemeDatos.Codigo = dbo.Productos.Codigo"  
-                    }
-                ],
-                conditions={
-                    "dbo.Productos.IdcAgente": idcAgente  
-                }
-            )
-
-            print(f"Query de UPDATE generada: {update_query}")
-            return update_query
-
-        except Exception as e:
-            print(f"Error al generar la query de UPDATE: {str(e)}")
-            return None
             
     def generar_query_delete_multimedia(self, idcAgente):
         """
-        Genera la query DELETE para la tabla Multimedia sin alias.
+        Genera la query DELETE para la tabla Multimedia utilizando el query_builder,
+        asegurando que el DELETE esté basado en la tabla correcta en los JOINs.
         """
         try:
-            # Construir la query utilizando el query_builder sin alias
+            # Construir la query DELETE con el FROM en la tabla de join principal
             delete_query = self.query_builder.build_query(
                 action="DELETE",
-                table="dbo.Multimedia",  
+                table="dbo.Multimedia",  # La tabla que se va a borrar
+                from_table="dbo.ProductosAgentes pa",  # Tabla principal para el FROM
                 joins=[
                     {
                         "type": "INNER JOIN",
-                        "table": "#tpAemeDatos",  
-                        "on": "#tpAemeDatos.Codigo = dbo.Multimedia.Ejeproducto"  
+                        "table": "dbo.Productos",
+                        "on": "dbo.Productos.IdcProducto = pa.IdcProducto"
                     },
                     {
                         "type": "INNER JOIN",
-                        "table": "dbo.ProductosAgentes",  
-                        "on": "dbo.ProductosAgentes.Codigo = #tpAemeDatos.Codigo"  
+                        "table": "dbo.ProductosAgentes pafab",
+                        "on": "pafab.IdcAgente = dbo.Productos.IdcFabricante AND pafab.IdcProducto = dbo.Productos.IdcProducto"
                     },
                     {
                         "type": "INNER JOIN",
-                        "table": "dbo.Productos",  
-                        "on": "dbo.Productos.IdcProducto = dbo.ProductosAgentes.IdcProducto"  
+                        "table": "dbo.Multimedia",
+                        "on": "dbo.Multimedia.IdcAgente = pafab.IdcAgente AND dbo.Multimedia.EjeProducto = pafab.Codigo"
                     },
                     {
                         "type": "INNER JOIN",
-                        "table": "dbo.ProductosAgentes",  
-                        "on": "dbo.ProductosAgentes.IdcAgente = dbo.Productos.IdcFabricante AND dbo.ProductosAgentes.IdcProducto = dbo.ProductosAgentes.IdcProducto"  
+                        "table": "clasifinteragentes cia",
+                        "on": "cia.IdcAgenteOrigen = pa.IdcAgente AND cia.IdcAgenteDestino = pafab.IdcAgente"
+                    },
+                    {
+                        "type": "INNER JOIN",
+                        "table": "#tpAemeDatos",
+                        "on": "#tpAemeDatos.Codigo = pa.Codigo"
                     }
                 ],
                 conditions={
-                    "dbo.ProductosAgentes.IdcAgente": idcAgente  
+                    "pa.IdcAgente": idcAgente,
+                    "dbo.Productos.IdcFabricante": {
+                        "not_in": "(SELECT IdcAgenteOrigen FROM ParametrosAgentes WHERE Parametro LIKE '%PAGO%' AND Valor = 'X' AND IdcAgenteOrigen <> pa.IdcAgente)"
+                    }
                 }
             )
 
@@ -126,35 +108,86 @@ class ConnectaAlimentiumModel:
         except Exception as e:
             print(f"Error al generar la query de DELETE para Multimedia: {str(e)}")
             return None
-    
-    def generar_query_delete_productos_agentes(self, idcAgente):
+
+
+
+    def generar_query_delete_productos_proveedores(self, idcAgente):
         """
-        Genera la query DELETE para la tabla ProductosAgentes sin alias.
+        Genera la query DELETE para eliminar productos proveedores desde `pafab`.
         """
         try:
-            # Construir la query utilizando el query_builder sin alias
+            # Construir la query utilizando el query_builder
             delete_query = self.query_builder.build_query(
                 action="DELETE",
-                table="dbo.ProductosAgentes",  
+                table="dbo.ProductosAgentes pa",  # Tabla principal con alias
+                delete_from_alias="pafab",  # Eliminar desde el alias 'pafab'
                 joins=[
                     {
                         "type": "INNER JOIN",
-                        "table": "#tpAemeDatos",  
-                        "on": "#tpAemeDatos.Codigo = dbo.ProductosAgentes.Codigo"  
+                        "table": "dbo.Productos",
+                        "on": "dbo.Productos.IdcProducto = pa.IdcProducto"
+                    },
+                    {
+                        "type": "INNER JOIN",
+                        "table": "dbo.ProductosAgentes pafab",
+                        "on": "pafab.IdcAgente = dbo.Productos.IdcFabricante AND pafab.IdcProducto = dbo.Productos.IdcProducto"
+                    },
+                    {
+                        "type": "INNER JOIN",
+                        "table": "clasifinteragentes cia",
+                        "on": "cia.IdcAgenteOrigen = pa.IdcAgente AND cia.IdcAgenteDestino = pafab.IdcAgente"
+                    },
+                    {
+                        "type": "INNER JOIN",
+                        "table": "#tpAemeDatos",
+                        "on": "#tpAemeDatos.Codigo = pa.Codigo"
                     }
                 ],
                 conditions={
-                    "dbo.ProductosAgentes.IdcAgente": idcAgente  
+                    "pa.IdcAgente": idcAgente,
+                    "dbo.Productos.IdcFabricante": {
+                        "not_in": "(SELECT IdcAgenteOrigen FROM ParametrosAgentes WHERE Parametro LIKE '%PAGO%' AND Valor = 'X' AND IdcAgenteOrigen <> pa.IdcAgente)"
+                    }
                 }
             )
 
-            print(f"Query de DELETE generada para ProductosAgentes: {delete_query}")
+            print(f"Query de DELETE generada para ProductosProveedores: {delete_query}")
             return delete_query
 
         except Exception as e:
-            print(f"Error al generar la query de DELETE para ProductosAgentes: {str(e)}")
+            print(f"Error al generar la query de DELETE para ProductosProveedores: {str(e)}")
             return None
 
+
+
+    def generar_query_delete_productos_agentes(self, idcAgente):
+            """
+            Genera la query DELETE para la tabla ProductosAgentes sin alias.
+            """
+            try:
+                # Construir la query utilizando el query_builder sin alias
+                delete_query = self.query_builder.build_query(
+                    action="DELETE",
+                    table="dbo.ProductosAgentes",  
+                    joins=[
+                        {
+                            "type": "INNER JOIN",
+                            "table": "#tpAemeDatos",  
+                            "on": "#tpAemeDatos.Codigo = dbo.ProductosAgentes.Codigo"  
+                        }
+                    ],
+                    conditions={
+                        "dbo.ProductosAgentes.IdcAgente": idcAgente  
+                    }
+                )
+                self.queries.append(delete_query)
+                print(f"Query de DELETE generada para ProductosAgentes: {delete_query}")
+                return delete_query
+
+            except Exception as e:
+                print(f"Error al generar la query de DELETE para ProductosAgentes: {str(e)}")
+                return None
+            
     def obtener_productos_agentes(self, codigos_aeme, idcAgente):
 
         """

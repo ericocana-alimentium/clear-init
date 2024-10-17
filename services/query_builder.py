@@ -5,24 +5,21 @@ class QueryBuilder:
     def __init__(self, cursor):
         self.cursor = cursor
 
-    def build_query(self, action, table, attributes=None, into = None ,conditions=None, values=None, joins=None):
-
+    def build_query(self, action, table, attributes=None, conditions=None, values=None, joins=None, into=None, from_table=None, delete_from_alias = None):
         """
         Construye la query basada en los parámetros proporcionados, pero no la ejecuta.
         """
-
         query = ""
 
-        # SELECT y SELECT INTO
+        # SELECT o SELECT INTO
         if action == "SELECT" or action == "SELECT INTO":
             columns = ", ".join(attributes) if attributes else "*"
-            query = f"SELECT {columns}"
-            
-            # Añadimos la cláusula INTO si está presente y si la acción es "SELECT INTO"
-            if action == "SELECT INTO" and into:
-                query += f" INTO {into}"
 
-            query += f" FROM {table}"
+            # Si el parámetro into está presente, significa que es un SELECT INTO
+            if into:
+                query = f"SELECT {columns} INTO {into} FROM {table}"
+            else:
+                query = f"SELECT {columns} FROM {table}"
 
             if joins:
                 for join in joins:
@@ -31,10 +28,12 @@ class QueryBuilder:
             if conditions:
                 where_clauses = []
                 for key, value in conditions.items():
-                    # Si el valor parece una función SQL, no lo envuelvas en comillas
-                    if isinstance(value, str) and "(" in value and ")" in value:
-                        where_clauses.append(f"{key} = {value}")
-                    elif isinstance(value, list):  # Manejo de listas con IN
+                    # Detectar funciones SQL o columnas con ciertos prefijos
+                    if isinstance(value, str) and ("(" in value and ")" in value):
+                        where_clauses.append(f"{key} = {value}")  # No agregar comillas si es una función
+                    elif isinstance(value, str) and (value.startswith("wfl.") or value.startswith("ftc.") or value.startswith("dbo.") or value.startswith("atr.")):
+                        where_clauses.append(f"{key} = {value}")  # No agregar comillas si tiene estos prefijos
+                    elif isinstance(value, list):  # Handle lists with IN
                         value_list = ", ".join(f"'{item}'" if isinstance(item, str) else str(item) for item in value)
                         where_clauses.append(f"{key} IN ({value_list})")
                     else:
@@ -43,24 +42,28 @@ class QueryBuilder:
                 where_clause = " AND ".join(where_clauses)
                 query += f" WHERE {where_clause}"
 
-        # UPDATE (SQL Server con JOIN)
+        # UPDATE y DELETE siguen la misma lógica, con sus propias cláusulas.
         elif action == "UPDATE":
-            set_clause = ", ".join([f"{k} = '{v}'" if isinstance(v, str) else f"{k} = {v}" for k, v in values.items()])
-            query = f"UPDATE {table} SET {set_clause}"
+            table_name = table.split()[0]  # Obtener solo el nombre de la tabla sin alias
 
-            # Para SQL Server, al hacer un UPDATE con JOIN, necesitamos especificar el FROM para las tablas relacionadas
+            # Comenzar la query de actualización sin alias en la parte del UPDATE
+            query = f"UPDATE {table_name} SET " + ", ".join(f"{k} = '{v}'" for k, v in values.items())
+
             if joins:
-                query += f" FROM {table}"  # Especificamos que el UPDATE es en esta tabla
+                query += f" FROM {from_table if from_table else table}"  # Usar from_table si está presente
                 for join in joins:
                     query += f" {join['type']} {join['table']} ON {join['on']}"
 
             if conditions:
                 where_clauses = []
                 for key, value in conditions.items():
-                    if isinstance(value, list):  # Handle lists with IN
+                    if isinstance(value, dict) and 'not_in' in value:  # Manejar NOT IN
+                        value_list = ", ".join(f"'{item}'" if isinstance(item, str) else str(item) for item in value['not_in'])
+                        where_clauses.append(f"{key} NOT IN ({value_list})")
+                    elif isinstance(value, list):  # Manejar listas con IN
                         value_list = ", ".join(f"'{item}'" if isinstance(item, str) else str(item) for item in value)
                         where_clauses.append(f"{key} IN ({value_list})")
-                    elif isinstance(value, str) and (value.startswith("wfl.") or value.startswith("dbo.") or value.startswith("ftc.")):
+                    elif isinstance(value, str) and ("(" in value and ")" in value):  # No agregar comillas si es una función
                         where_clauses.append(f"{key} = {value}")
                     else:
                         where_clauses.append(f"{key} = '{value}'" if isinstance(value, str) else f"{key} = {value}")
@@ -68,9 +71,18 @@ class QueryBuilder:
                 where_clause = " AND ".join(where_clauses)
                 query += f" WHERE {where_clause}"
 
-        # DELETE (SQL Server con JOIN)
         elif action == "DELETE":
-            query = f"DELETE {table} FROM {table}"  # Aquí se repite la tabla para SQL Server
+            table_name = table.split()[0]  # Obtener solo el nombre de la tabla sin alias
+        
+            if delete_from_alias and from_table:
+                query = f"DELETE {delete_from_alias} FROM {from_table}"  # Usar el alias en el DELETE y una tabla diferente en el FROM
+            elif from_table:
+                query = f"DELETE {table_name} FROM {from_table}"
+            elif delete_from_alias:
+                query = f"DELETE {delete_from_alias} FROM {table}"  # Usar el alias en el DELETE y la tabla en el FROM
+            else:
+                query = f"DELETE {table_name} FROM {table}"  # Usar el nombre de la tabla en el DELETE y el FROM
+            
 
             if joins:
                 for join in joins:
@@ -79,10 +91,16 @@ class QueryBuilder:
             if conditions:
                 where_clauses = []
                 for key, value in conditions.items():
-                    if isinstance(value, list):  # Handle lists with IN
+                    if isinstance(value, dict) and 'not_in' in value:  # Manejar NOT IN
+                        if isinstance(value['not_in'], str):  # Si es una subconsulta, no agregar comillas
+                            where_clauses.append(f"{key} NOT IN {value['not_in']}")
+                        else:  # Si es una lista de valores, formatear correctamente
+                            value_list = ", ".join(f"'{item}'" if isinstance(item, str) else str(item) for item in value['not_in'])
+                            where_clauses.append(f"{key} NOT IN ({value_list})")
+                    elif isinstance(value, list):  # Manejar listas con IN
                         value_list = ", ".join(f"'{item}'" if isinstance(item, str) else str(item) for item in value)
                         where_clauses.append(f"{key} IN ({value_list})")
-                    elif isinstance(value, str) and (value.startswith("wfl.") or value.startswith("dbo.") or value.startswith("ftc.")):
+                    elif isinstance(value, str) and ("(" in value and ")" in value):  # No agregar comillas si es una función o subconsulta
                         where_clauses.append(f"{key} = {value}")
                     else:
                         where_clauses.append(f"{key} = '{value}'" if isinstance(value, str) else f"{key} = {value}")
@@ -90,7 +108,12 @@ class QueryBuilder:
                 where_clause = " AND ".join(where_clauses)
                 query += f" WHERE {where_clause}"
 
+        print(f"Query final: {query}")
         return query
+
+
+
+
 
     def execute_query(self, query, allow_modifications=False):
         try:

@@ -103,10 +103,10 @@ class ConnectaAlimentiumController(BaseController):
 BEGIN TRAN
 """       
         try:
-            #connecta_model = ConnectaAlimentiumModel(self.db.cursor)
-            #self.queries.append(connecta_model.generar_query_update_productos(self.idcAgente))
-            #self.queries.append(connecta_model.generar_query_delete_multimedia(self.idcAgente))
-            #self.queries.append(connecta_model.generar_query_delete_productos_agentes(self.idcAgente))
+            connecta_model = ConnectaAlimentiumModel(self.db.cursor)
+            self.queries.append(connecta_model.generar_query_delete_multimedia(int(self.idcAgente)))
+            self.queries.append(connecta_model.generar_query_delete_productos_proveedores(int(self.idcAgente)))
+            self.queries.append(connecta_model.generar_query_delete_productos_agentes(int(self.idcAgente)))
 
 
             # Abrir el archivo SQL para escribir
