@@ -199,3 +199,4 @@ El sistema gestiona las conexiones a las bases de datos mediante una clase espec
 - **Clase de conexión**: La clase `DBConnection` se encarga de abrir y cerrar conexiones a las bases de datos AemeDB y Connect.
 - **Uso del ODBC Driver**: El sistema utiliza el driver ODBC para conectar con Microsoft SQL Server, asegurando compatibilidad con las bases de datos SQL Server en producción.
 - **Manejo de errores**: Se ha integrado un sistema de manejo de errores que captura cualquier excepción relacionada con la conexión y las queries, mostrando mensajes detallados para ayudar a depurar y resolver problemas rápidamente.
+

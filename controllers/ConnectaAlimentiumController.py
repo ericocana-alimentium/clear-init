@@ -104,6 +104,7 @@ BEGIN TRAN
 """       
         try:
             connecta_model = ConnectaAlimentiumModel(self.db.cursor)
+            self.queries.append(connecta_model.generar_tp_clientes_alimentium(int(self.idcAgente)))
             self.queries.append(connecta_model.generar_query_delete_multimedia(int(self.idcAgente)))
             self.queries.append(connecta_model.generar_query_delete_productos_proveedores(int(self.idcAgente)))
             self.queries.append(connecta_model.generar_query_delete_productos_agentes(int(self.idcAgente)))

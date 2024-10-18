@@ -103,7 +103,7 @@ class WorkFlowAgenteModel:
                 action="SELECT",
                 table="ProductoOrganizacion",
                 attributes=["Id", "Codigo"],
-                conditions={"idcAgente": self.idcAgente, "Id": producto_organizacion_ids}
+                conditions={"idcAgente": self.idcAgente, "Id": producto_organizacion_ids,}
             )
 
             result=self.query_builder.execute_query(query)
@@ -171,6 +171,7 @@ class WorkFlowAgenteModel:
                 ],
                 conditions={"ProductoOrganizacion.idcAgente": idcAgente, "wfl.ProcesoWorkFlow.WorkflowId": f"wfl.GetModuloAgenteId('{modulo}')"}
             )
+            
             queries.append(delete_technical_data)
 
             # DELETE para RegistrosDeCambios con INNER JOIN

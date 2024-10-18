@@ -97,7 +97,7 @@ class ConnectaAlimentiumModel:
                 conditions={
                     "pa.IdcAgente": idcAgente,
                     "dbo.Productos.IdcFabricante": {
-                        "not_in": "(SELECT IdcAgenteOrigen FROM ParametrosAgentes WHERE Parametro LIKE '%PAGO%' AND Valor = 'X' AND IdcAgenteOrigen <> pa.IdcAgente)"
+                        "not_in": "(SELECT * FROM #tpClientesAlimentium)"
                     }
                 }
             )
@@ -146,7 +146,7 @@ class ConnectaAlimentiumModel:
                 conditions={
                     "pa.IdcAgente": idcAgente,
                     "dbo.Productos.IdcFabricante": {
-                        "not_in": "(SELECT IdcAgenteOrigen FROM ParametrosAgentes WHERE Parametro LIKE '%PAGO%' AND Valor = 'X' AND IdcAgenteOrigen <> pa.IdcAgente)"
+                        "not_in": "(SELECT * FROM #tpClientesAlimentium)"
                     }
                 }
             )
@@ -229,7 +229,22 @@ class ConnectaAlimentiumModel:
             print(f"Error al obtener productos agentes: {str(e)}")
             ErrorHandler.handle_error(e, "Error al obtener productos agentes de Connecta_Alimentium")
             return None
-
+        
+    def generar_tp_clientes_alimentium(self, idcAgente):
+        """
+        Genera la query para crear la tabla temporal #tpClientesAlimentium directamente.
+        """
+        try:
+            # Construir la query de forma explícita
+            query = f"""
+SELECT IdcAgenteOrigen INTO #tpClientesAlimentium FROM ParametrosAgentes WHERE Parametro LIKE '%PAGO%' AND Valor = 'X' AND IdcAgenteOrigen <> {idcAgente}
+"""
+            
+            print(f"Query para crear #tpClientesAlimentium: {query}")
+            return query
+        except Exception as e:
+            print(f"Error al generar la query de #tpClientesAlimentium: {str(e)}")
+            return None
     
     def debug_datos_aeme(self):
         print(f"Estado actual de self.datos_aeme: {self.datos_aeme}, fin.")
